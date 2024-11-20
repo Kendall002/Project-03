@@ -1,1 +1,105 @@
+# Import needed modules
+from datetime import datetime, timedelta
 
+# Abstraction: A class to represent a caregiver
+class Caregiver:
+    """Encapsulates caregiver attributes and availability."""
+    def __init__(self, name, phone, email, pay_rate):
+        # Attributes of a caregiver
+        self.name = name
+        self.phone = phone
+        self.email = email
+        self.pay_rate = pay_rate
+        self.hours = 0  # Total hours worked in the month
+        # Availability dictionary where keys are shift times and values are availability status
+        self.availability = {}  # e.g., {'2024-11-20 AM': 'preferred', '2024-11-20 PM': 'unavailable'}
+
+    def set_availability(self, date, shift, status):
+        """Set availability for a specific date and shift."""
+        key = f"{date} {shift}"  # e.g., "2024-11-20 AM"
+        self.availability[key] = status
+
+    def get_availability(self, date, shift):
+        """Retrieve availability for a specific shift."""
+        key = f"{date} {shift}"
+        return self.availability.get(key, 'available')  # Default is 'available'
+
+
+# Encapsulation and Abstraction: A class to handle the schedule
+class Schedule:
+    """Manages the scheduling of caregivers."""
+    def __init__(self):
+        # A dictionary to store shifts and assigned caregivers
+        self.shifts = {}  # e.g., {'2024-11-20 AM': 'Jane Doe'}
+
+    def assign_shift(self, date, shift, caregiver):
+        """Assign a caregiver to a specific shift."""
+        key = f"{date} {shift}"
+        self.shifts[key] = caregiver.name
+        caregiver.hours += 6  # Increment caregiver's hours for the assigned shift
+
+    def get_shift_assignment(self, date, shift):
+        """Retrieve the caregiver assigned to a shift."""
+        key = f"{date} {shift}"
+        return self.shifts.get(key, None)  # Returns None if no one is assigned
+
+
+# Polymorphism: Function to generate a schedule using caregivers' availability
+def generate_schedule(caregivers, start_date, end_date):
+    """
+    Generate a monthly schedule by assigning caregivers to shifts 
+    based on their availability and workload.
+    """
+    schedule = Schedule()  # Create a new schedule instance
+
+    # Convert start_date and end_date to datetime objects
+    start = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+
+    # Loop through all dates in the range
+    current_date = start
+    while current_date <= end:
+        date_str = current_date.strftime("%Y-%m-%d")
+        for shift in ['AM', 'PM']:
+            assigned = False
+
+            # Sort caregivers by hours worked to ensure fairness
+            for caregiver in sorted(caregivers, key=lambda x: x.hours):
+                # Check caregiver's availability
+                availability = caregiver.get_availability(date_str, shift)
+                if availability in ['preferred', 'available']:
+                    # Assign caregiver to the shift
+                    schedule.assign_shift(date_str, shift, caregiver)
+                    assigned = True
+                    break
+
+            # If no one is available, print a warning
+            if not assigned:
+                print(f"Warning: Shift on {date_str} {shift} is not covered!")
+
+        # Move to the next day
+        current_date += timedelta(days=1)
+
+    return schedule
+
+
+# Example usage
+if __name__ == "__main__":
+    # Create a list of caregivers
+    caregivers = [
+        Caregiver("Jane Doe", "123-456-7890", "jane@example.com", 15),
+        Caregiver("John Smith", "234-567-8901", "john@example.com", 12),
+    ]
+
+    # Set caregiver availability
+    caregivers[0].set_availability("2024-11-20", "AM", "preferred")
+    caregivers[1].set_availability("2024-11-20", "PM", "preferred")
+
+    # Generate the schedule
+    start_date = "2024-11-20"
+    end_date = "2024-11-21"
+    schedule = generate_schedule(caregivers, start_date, end_date)
+
+    # Display the schedule
+    for key, caregiver_name in schedule.shifts.items():
+        print(f"{key}: {caregiver_name}")
